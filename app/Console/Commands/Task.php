@@ -20,6 +20,8 @@ class Task extends Command
     protected $signature = 'symbol:shake {rows?}';
     protected $symbols = [9, 10, 'J', 'Q', 'K', 'A', 'cat', 'dog', 'monkey', 'bird'];
     protected $rows = [[0,3,6,9,12],[1,4,7,10,13],[2,5,8,11,14],[0,4,8,10,12],[2,4,6,10,14]];
+    protected $wins = [3 => 20, 4 => 200, 5 => 1000];
+    protected $bet_amount = 100;
 
 
     /**
@@ -87,12 +89,17 @@ class Task extends Command
         
         $card_sort = [];
         $card_index = 0;
+        
+        $card_all_str = '';
         foreach($card_all as $card){
             
             for($jj = 0;$jj < count($card); $jj++){
                 $card_sort[$jj.$card_index] = $card[$jj];
             }
             $card_index++;
+            
+            // boards string
+            $card_all_str.= implode(',',$card) . ',';
         }
 
         ksort($card_sort);
@@ -121,8 +128,12 @@ class Task extends Command
 
         // we are looking for the winner
         $table_row_new = [];
-        foreach($table_row as $cards){
+        $table_array_win = [];
+        $table_row_new_str = '';
+        $wins_total = 0;
+        foreach($table_row as $k_ey => $cards){
             $card_unique_count = count(array_unique($cards));
+            $value = 0;
             if($card_unique_count<5){
                 
                 $acols = [];
@@ -131,8 +142,10 @@ class Task extends Command
                     
                     $card_duplicate_tag = $card_duplicate;
                     
-                    if($value>1){
+                    if($value>2){
                         $card_duplicate_tag = '<fg=red;bg=yellow>' . $card_duplicate . '</>';
+                        $table_array_win[] = [($k_ey+1), $value, $this->wins[$value], ($this->bet_amount * $this->wins[$value]/100)];
+                        $wins_total+= ($this->bet_amount * $this->wins[$value] / 100);
                     }
 
                     for($ii=0;$ii<$value;$ii++){
@@ -140,9 +153,12 @@ class Task extends Command
                     }
                 }
                 $table_row_new[] = $acols;
+
             }else{
                 $table_row_new[] = $cards;
             }
+
+            $table_row_new_str.= '{"' . implode(' ', $cards).'":' . ($value > 2 ? $value : 0) . '},';
         }
 
         $table = new Table($this->output);
@@ -150,45 +166,31 @@ class Task extends Command
         $table->setRows($table_row_new);
         $table->render();
 
-
-
-
-/*
-        foreach($card_all as $card){
-
-            $card_unique = array_unique($card);
-            $this->info('symbol unique (' . $i . '): ' . print_r($card_unique, true));
-                    
-
-            $card_unique_count = count(array_unique($card));
-            $this->info('symbol unique count(' . $i . '): ' . $card_unique_count);
-            
-            
-            $card_duplicate = (5 - $card_unique_count)+1;
-            if($card_unique_count < count($card)){
-                sort($card);
-                
-                $card_unique_one = array_count_values($card);
-                foreach($card_unique_one as $card_duplicate => $value){
-                    if($value>1){
-                        //$this->error('symbol win (' . $i . '): ' . implode(',', $card));
-                        $card_duplicate = '<fg=red;bg=yellow>(' . $card_duplicate . ')</>';
-                        $this->info('symbol win (' . $i . ') nr duplicate card ' . $card_duplicate . ': <fg=red>' . implode(',', $card).'</>');
-                    }
-                }
-
-            }
-
+        $this->line(PHP_EOL);
+        
+        $table = new Table($this->output);
+        $table->setHeaders([[new TableCell('Winner with nr of row', ['colspan' => 4])],['hand','match','%','win']]);
+        
+        if(!empty($table_array_win)){
+            $table->setRows($table_array_win);
+        }else{
+            $table->setRows([$separator]);
         }
-*/
+        
+        $table->render();
+        
+        $output = [
+            'boards' => trim($card_all_str, ','),
+            'paylines' => trim($table_row_new_str, ','),
+            'bet_amount' => $this->bet_amount,
+            'total_win' => $wins_total
+        ];
+        
+        
+        $this->line(PHP_EOL);
+        $output_str = json_encode($output, JSON_PRETTY_PRINT);
+        $this->info($output_str);
 
-/*
-        for($i=1;$i<=$rows;$i++){
-            shuffle($this->symbols);
-            $b = array_slice($this->symbols, 5);
-            $this->info('symbol mixed (' . $i . '): ' . implode(',', $b));
-        }
-*/
 
     }
 }
