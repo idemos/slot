@@ -27,7 +27,7 @@ class Task extends Command
      *
      * @var string
      */
-    protected $description = 'Creare/Cambiare Password da input';
+    protected $description = 'Play with video slot';
 
     /**
      * Create a new command instance.
